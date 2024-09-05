@@ -1,5 +1,6 @@
 local M = {}
 local pl = require "penlight"
+local graph = require "luaxake-graph"
 local log = logging.new("files")
 
 local path = pl.path
