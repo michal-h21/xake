@@ -1,0 +1,14 @@
+#!/usr/bin/env texlua
+kpse.set_program_name "luatex"
+
+logging = require("make4ht-logging")
+
+local files = require "luaxake.files"
+
+
+local dir = arg[1] or "."
+
+
+files.needing_compilation(dir)
+
+
