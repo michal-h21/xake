@@ -104,7 +104,7 @@ end
 local function filter_main_tex_files(files)
   local t = {}
   for _, metadata in ipairs(files) do
-    if is_main_tex_file(metadata.absolute_path) then
+    if is_main_tex_file(metadata.absolute_path, config.documentclass_lines ) then
       log:debug("Found main TeX file: " .. metadata.absolute_path)
       t[#t+1] = metadata
     end
@@ -191,7 +191,7 @@ local function needing_compilation(dir)
     -- get list of included TeX files
     metadata.dependecies = get_tex_dependencies(metadata)
     -- check for the need compilation
-    local status, output_files = check_output_files(metadata, {"html", "pdf"})
+    local status, output_files = check_output_files(metadata, config.output_formats)
     metadata.needs_compilation = status 
     metadata.output_files = output_files
     log:debug("main tex file", metadata.filename, metadata.absolute_dir, metadata.extension, status)

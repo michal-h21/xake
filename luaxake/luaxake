@@ -3,6 +3,13 @@ kpse.set_program_name "luatex"
 
 logging = require("make4ht-logging")
 
+config = {
+  -- list of extensions of output files
+  output_formats = {"html", "pdf"},
+  -- number of lines in tex files where we should look for \documentclass
+  documentclass_lines = 30,
+}
+
 local files = require "luaxake-files"
 
 
