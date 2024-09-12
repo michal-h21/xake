@@ -53,8 +53,8 @@ end
 ---@param files? table retrieved files
 ---@return table
 local function get_files(dir, files)
-  local dir = prepare_dir(dir)
-  local files = files or {}
+  dir = prepare_dir(dir)
+  files = files or {}
   for entry in path.dir(dir) do
     if not ignore_entry(entry) then
       local metadata = get_metadata(dir, entry)
@@ -104,7 +104,7 @@ end
 local function filter_main_tex_files(files)
   local t = {}
   for _, metadata in ipairs(files) do
-    if is_main_tex_file(metadata.absolute_path ) then
+    if is_main_tex_file(metadata.absolute_path) then
       log:debug("Found main TeX file: " .. metadata.absolute_path)
       t[#t+1] = metadata
     end
@@ -112,14 +112,19 @@ local function filter_main_tex_files(files)
   return t
 end
 
---- Detect if the HTML file needs recompilation
----@param tex string
----@param html string
----@return boolean?
+--- Detect if the output file needs recompilation
+---@param tex table metadata of the main TeX file to be compiled
+---@param html table metadata of the output file
 ---@return boolean
 local function is_up_to_date(tex, html)
-  if not path.isfile(html) then return nil, true end
-  return path.getmtime(tex) < (path.getmtime(html) or 0)
+  -- if the output file doesn't exist, it needs recompilation
+  if not html.exists then return true end
+  -- test if the output file is older if the main file or any dependency
+  local status = tex.modified > html.modified
+  for _,subfile in ipairs(tex.dependecies or {}) do
+    status = status or subfile.modified > html.modified
+  end
+  return status
 end
 
 local input_commands = {input=true, activity=true, include=true, includeonly=true}
@@ -154,23 +159,44 @@ local function get_tex_dependencies(metadata)
   return dependecies
 end
 
+
+--- check if any output file needs a compilation
+---@param metadata table metadata of the TeX file
+---@param extensions table list of extensions
+---@return table
+local function check_output_files(metadata, extensions)
+  local output_files = {}
+  local tex_file = metadata.relative_path
+  local needs_compilation = false
+  for _, extension in ipairs(extensions) do
+    local html_file = get_metadata(metadata.dir, tex_file:gsub("tex$", extension))
+    -- detect if the HTML file needs recompilation
+    local status = is_up_to_date(metadata, html_file)
+    needs_compilation = needs_compilation or status
+    log:debug("needs compilation", html_file.absolute_path, status)
+    output_files[#output_files+1] = {
+      needs_compilation = status,
+      metadata          = html_file,
+      extension         = extension
+    }
+  end
+  return needs_compilation, output_files
+end
+
 local function needing_compilation(dir)
   local files = get_files(dir)
   local tex_files = filter_main_tex_files(get_tex_files(files))
-  local dirty = {}
+  -- now check which output files needs a compilation
   for _, metadata in ipairs(tex_files) do
-    local tex_file = metadata.relative_path
-    local html_file = tex_file:gsub("tex$", "html")
-    -- detect if the HTML file needs recompilation
-    local good, err = is_up_to_date(tex_file, html_file)
-    if err == nil then
-      dirty[tex_file] = not good
-    else
-      dirty[tex_file] = true
-    end
+    -- get list of included TeX files
     metadata.dependecies = get_tex_dependencies(metadata)
-    log:debug(metadata.filename, metadata.absolute_dir, metadata.extension, good, dirty[tex_file])
+    -- check for the need compilation
+    local status, output_files = check_output_files(metadata, {"html", "pdf"})
+    metadata.needs_compilation = status 
+    metadata.output_files = output_files
+    log:debug("main tex file", metadata.filename, metadata.absolute_dir, metadata.extension, status)
   end
+  return tex_files
 end
 
 M.needing_compilation = needing_compilation
