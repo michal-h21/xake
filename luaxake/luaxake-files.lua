@@ -1,7 +1,8 @@
 local M = {}
 local pl = require "penlight"
-local graph = require "luaxake-graph"
+-- local graph = require "luaxake-graph"
 local log = logging.new("files")
+local mkutils = require "mkutils"
 
 local path = pl.path
 
@@ -28,6 +29,25 @@ local function prepare_dir(dir)
   return dir:gsub("/$", "")
 end
 
+--- get absolute and relative file path, as well as other file metadata
+--- @param dir string current directory
+--- @param entry string current filename
+--- @return table
+local function get_metadata(dir, entry)
+  local relative_path = string.format("%s/%s", dir, entry)
+  local metadata = {
+    dir = dir,
+    absolute_dir = abspath(dir),
+    filename = entry,
+    relative_path = relative_path,
+    absolute_path = abspath(relative_path),
+    extension     = get_extension(relative_path),
+    modified      = path.getmtime(relative_path)
+  }
+  metadata.exists = mkutils.file_exists(metadata.absolute_path)
+  return metadata
+end
+
 --- get metadata for all files in a directory and it's subdirectories
 ---@param dir string path to the directory
 ---@param files? table retrieved files
@@ -37,16 +57,11 @@ local function get_files(dir, files)
   local files = files or {}
   for entry in path.dir(dir) do
     if not ignore_entry(entry) then
-      local relative_path = string.format("%s/%s", dir, entry)
+      local metadata = get_metadata(dir, entry)
+      local relative_path = metadata.relative_path
       if path.isdir(relative_path) then
         files = get_files(relative_path, files)
       elseif path.isfile(relative_path) then
-        local metadata = {
-          relative_path = relative_path,
-          absolute_path = abspath(relative_path),
-          extension     = get_extension(relative_path),
-          modified      = path.getmtime(relative_path)
-        }
         files[#files+1] = metadata
       end
     end
@@ -67,6 +82,36 @@ local function get_tex_files(files)
   return tbl
 end
 
+--- test if the TeX file can be compiled standalone
+--- @param filename string name of the tested TeX file
+--- @param linecount number number of lines that should be tested
+--- @return boolean
+local function is_main_tex_file(filename, linecount)
+  -- we assume that the main TeX file contains \documentclass near beginning of the file 
+  linecount = linecount or 30 -- number of lines that will be read
+  local line_no = 0
+  for line in io.lines(filename) do
+    line_no = line_no + 1
+    if line_no > linecount then break end
+    if line:match("^%s*\\documentclass") then return true end
+  end
+  return false
+end
+
+--- get list of compilable TeX files 
+--- @param files table list of TeX files to be tested
+--- @return table
+local function filter_main_tex_files(files)
+  local t = {}
+  for _, metadata in ipairs(files) do
+    if is_main_tex_file(metadata.absolute_path ) then
+      log:debug("Found main TeX file: " .. metadata.absolute_path)
+      t[#t+1] = metadata
+    end
+  end
+  return t
+end
+
 --- Detect if the HTML file needs recompilation
 ---@param tex string
 ---@param html string
@@ -79,7 +124,12 @@ end
 
 local input_commands = {input=true, activity=true, include=true, includeonly=true}
 
-local function get_tex_dependencies(filename, current_dir)
+--- get list of files included in the given TeX file
+--- @param metadata table TeX file metadata
+--- @return table
+local function get_tex_dependencies(metadata)
+  local filename = metadata.absolute_path
+  local current_dir = metadata.absolute_dir
   local f = io.open(filename, "r")
   local dependecies = {}
   if f then
@@ -89,25 +139,24 @@ local function get_tex_dependencies(filename, current_dir)
     for command, argument in content:gmatch("\\(%w+)%s*{([^%}]+)}") do
       -- add dependency if the current command is \input like
       if input_commands[command] then
-        local filename = path.relpath(argument, current_dir)
-        if not path.isfile(filename) then
-          filename = filename .. ".tex"
+        local metadata = get_metadata(current_dir, argument)
+        if not metadata.exists then
+          -- the .tex extension may be missing, so try to read it again
+          metadata = get_metadata(current_dir, argument .. ".tex")
         end
-        print(filename)
-        if path.isfile(filename) then
-          dependecies[#dependecies+1] = filename
-          print(filename)
+        if metadata.exists then
+          log:debug("dependency: ", metadata.absolute_path)
+          dependecies[#dependecies+1] = metadata
         end
       end
     end
-    
   end
   return dependecies
 end
 
 local function needing_compilation(dir)
   local files = get_files(dir)
-  local tex_files = get_tex_files(files)
+  local tex_files = filter_main_tex_files(get_tex_files(files))
   local dirty = {}
   for _, metadata in ipairs(tex_files) do
     local tex_file = metadata.relative_path
@@ -119,8 +168,8 @@ local function needing_compilation(dir)
     else
       dirty[tex_file] = true
     end
-    metadata.dependecies = get_tex_dependencies(tex_file, dir)
-    log:debug(metadata.relative_path, metadata.absolute_path, metadata.extension, good, dirty[tex_file])
+    metadata.dependecies = get_tex_dependencies(metadata)
+    log:debug(metadata.filename, metadata.absolute_dir, metadata.extension, good, dirty[tex_file])
   end
 end
 
