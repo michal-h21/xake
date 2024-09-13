@@ -100,19 +100,25 @@ function Graph:sort()
   return L
 end
 
-local graph = Graph:new()
+---------------------
+-- Example of use: --
+-- ------------------
+-- local graph = Graph:new()
+-- 
+-- 
+-- graph:add_edge("a", "b")
+-- graph:add_edge("a", "c")
+-- graph:add_edge("b", "d")
+-- graph:add_edge("c", "d")
+-- graph:add_edge("d", "e")
+-- graph:add_edge("b", "e")
+-- 
+-- for _, name in ipairs(graph:sort()) do
+--   print(name)
+-- end
+--
 
-
-graph:add_edge("a", "b")
-graph:add_edge("a", "c")
-graph:add_edge("b", "d")
-graph:add_edge("c", "d")
-graph:add_edge("d", "e")
-graph:add_edge("b", "e")
-
-for _, name in ipairs(graph:sort()) do
-  print(name)
-end
+return Graph
 
 
 

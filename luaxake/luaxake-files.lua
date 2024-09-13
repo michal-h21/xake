@@ -1,6 +1,6 @@
 local M = {}
 local pl = require "penlight"
--- local graph = require "luaxake-graph"
+local graph = require "luaxake-graph"
 local log = logging.new("files")
 local mkutils = require "mkutils"
 
@@ -9,8 +9,8 @@ local path = pl.path
 local abspath = pl.path.abspath
 
 --- identify, if the file should be ignored
----@param entry string
----@return boolean
+--- @param entry string
+--- @return boolean
 local function ignore_entry(entry)
   -- files that should be ignored
   if entry:match("^%.") then return true end 
@@ -23,8 +23,8 @@ local function get_extension(relative_path)
 end
 
 --- normalize directory name to be used in get_files
----@param dir string
----@return string
+--- @param dir string
+--- @return string
 local function prepare_dir(dir)
   return dir:gsub("/$", "")
 end
@@ -49,9 +49,9 @@ local function get_metadata(dir, entry)
 end
 
 --- get metadata for all files in a directory and it's subdirectories
----@param dir string path to the directory
----@param files? table retrieved files
----@return table
+--- @param dir string path to the directory
+--- @param files? table retrieved files
+--- @return table
 local function get_files(dir, files)
   dir = prepare_dir(dir)
   files = files or {}
@@ -70,8 +70,8 @@ local function get_files(dir, files)
 end
 
 --- filter TeX files from array of files
----@param files table
----@return table
+--- @param files table
+--- @return table
 local function get_tex_files(files)
   local tbl = {}
   for _, file in ipairs(files) do
@@ -183,6 +183,48 @@ local function check_output_files(metadata, extensions)
   return needs_compilation, output_files
 end
 
+--- create sorted table of files that needs to be compiled 
+---@param tex_files table list of TeX files metadata
+---@return table to_be_compiled list of files in order to be compiled
+local function sort_dependencies(tex_files)
+  -- create a dependency graph for files that needs compilation 
+  -- the files that include other courses needs to be compiled after changed courses 
+  -- at least that is what the original Xake command did. I am not sure if it is really necessary.
+  local Graph = graph:new()
+  local used = {}
+  local to_be_compiled = {}
+  -- first add all used files
+  for _, metadata in ipairs(tex_files) do
+    if metadata.needs_compilation then
+      Graph:add_edge("root", metadata.absolute_path)
+      used[metadata.absolute_path] = metadata
+    end
+  end
+  -- now add edges to included files which needs to be recompiled
+  for _, metadata in pairs(used) do
+    local current_name = metadata.absolute_path
+    for _, child in ipairs(metadata.dependecies) do
+      local name = child.absolute_path
+      -- add edge only to files added in the first run, because only these needs compilation
+      if used[name] then
+        Graph:add_edge(current_name, name)
+      end
+    end
+  end
+  -- topographic sort of the graph to get dependency sequence
+  local sorted = Graph:sort()
+  -- we need to save files in the reversed order, because these needs to be compiled first
+  for i = #sorted, 1, -1 do
+    local name = sorted[i]
+    to_be_compiled[#to_be_compiled+1] = used[name]
+  end
+  return to_be_compiled
+end
+
+--- find TeX files that needs to be compiled in the directory tree
+--- @param dir string root directory where we should find TeX files
+--- @return table to_be_compiled list of that need compilation
+--- @return table tex_files list of all TeX files found in the directory tree
 local function needing_compilation(dir)
   local files = get_files(dir)
   local tex_files = filter_main_tex_files(get_tex_files(files))
@@ -192,11 +234,14 @@ local function needing_compilation(dir)
     metadata.dependecies = get_tex_dependencies(metadata)
     -- check for the need compilation
     local status, output_files = check_output_files(metadata, config.output_formats)
-    metadata.needs_compilation = status 
+    metadata.needs_compilation = status
     metadata.output_files = output_files
     log:debug("main tex file", metadata.filename, metadata.absolute_dir, metadata.extension, status)
   end
-  return tex_files
+
+  -- create ordered list of files that needs to be compiled
+  local to_be_compiled = sort_dependencies(tex_files)
+  return to_be_compiled, tex_files
 end
 
 M.needing_compilation = needing_compilation
