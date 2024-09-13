@@ -9,15 +9,18 @@ local path = pl.path
 local abspath = pl.path.abspath
 
 --- identify, if the file should be ignored
---- @param entry string
---- @return boolean
+--- @param entry string tested file path
+--- @return boolean should_be_ignored if file should be ignored
 local function ignore_entry(entry)
   -- files that should be ignored
-  if entry:match("^%.") then return true end 
+  if entry:match("^%.") then return true end
   return false
 end
 
 
+--- get file extension 
+--- @param relative_path string file path
+--- @return string extension
 local function get_extension(relative_path)
   return relative_path:match("%.([^%.]+)$")
 end
@@ -32,9 +35,21 @@ end
 --- get absolute and relative file path, as well as other file metadata
 --- @param dir string current directory
 --- @param entry string current filename
---- @return table
+--- @return metadata
 local function get_metadata(dir, entry)
   local relative_path = string.format("%s/%s", dir, entry)
+  --- @class metadata 
+  --- @field dir string relative directory path of the file 
+  --- @field absolute_dir string absolute directory path of the file
+  --- @field filename string basename of the file
+  --- @field extension string file extension
+  --- @field relative_path string relative path of the file 
+  --- @field absolute_path string absolute path of the file
+  --- @field modified number last modification time 
+  --- @field dependecies metadata[] list of files the file depends on
+  --- @field needs_compilation boolean 
+  --- @field exists boolean true if file exists
+  --- @field output_files output_file[]
   local metadata = {
     dir = dir,
     absolute_dir = abspath(dir),
@@ -42,7 +57,10 @@ local function get_metadata(dir, entry)
     relative_path = relative_path,
     absolute_path = abspath(relative_path),
     extension     = get_extension(relative_path),
-    modified      = path.getmtime(relative_path)
+    modified      = path.getmtime(relative_path),
+    dependecies   = {},
+    needs_compilation = false,
+    output_files  = {},
   }
   metadata.exists = mkutils.file_exists(metadata.absolute_path)
   return metadata
@@ -51,7 +69,7 @@ end
 --- get metadata for all files in a directory and it's subdirectories
 --- @param dir string path to the directory
 --- @param files? table retrieved files
---- @return table
+--- @return metadata[]
 local function get_files(dir, files)
   dir = prepare_dir(dir)
   files = files or {}
@@ -70,8 +88,8 @@ local function get_files(dir, files)
 end
 
 --- filter TeX files from array of files
---- @param files table
---- @return table
+--- @param files metadata[] list of  files to be checked
+--- @return metadata[] list of TeX files
 local function get_tex_files(files)
   local tbl = {}
   for _, file in ipairs(files) do
@@ -85,7 +103,7 @@ end
 --- test if the TeX file can be compiled standalone
 --- @param filename string name of the tested TeX file
 --- @param linecount number number of lines that should be tested
---- @return boolean
+--- @return boolean is_main true if the file contains \documentclass
 local function is_main_tex_file(filename, linecount)
   -- we assume that the main TeX file contains \documentclass near beginning of the file 
   linecount = linecount or 30 -- number of lines that will be read
@@ -99,8 +117,8 @@ local function is_main_tex_file(filename, linecount)
 end
 
 --- get list of compilable TeX files 
---- @param files table list of TeX files to be tested
---- @return table
+--- @param files metadata[] list of TeX files to be tested
+--- @return metadata[] main_tex_files list of main TeX files
 local function filter_main_tex_files(files)
   local t = {}
   for _, metadata in ipairs(files) do
@@ -113,8 +131,8 @@ local function filter_main_tex_files(files)
 end
 
 --- Detect if the output file needs recompilation
----@param tex table metadata of the main TeX file to be compiled
----@param html table metadata of the output file
+---@param tex metadata metadata of the main TeX file to be compiled
+---@param html metadata metadata of the output file
 ---@return boolean
 local function is_up_to_date(tex, html)
   -- if the output file doesn't exist, it needs recompilation
@@ -130,8 +148,8 @@ end
 local input_commands = {input=true, activity=true, include=true, includeonly=true}
 
 --- get list of files included in the given TeX file
---- @param metadata table TeX file metadata
---- @return table
+--- @param metadata metadata TeX file metadata
+--- @return metadata[] dependecies list of files included from the file
 local function get_tex_dependencies(metadata)
   local filename = metadata.absolute_path
   local current_dir = metadata.absolute_dir
@@ -161,9 +179,10 @@ end
 
 
 --- check if any output file needs a compilation
----@param metadata table metadata of the TeX file
----@param extensions table list of extensions
----@return table
+--- @param metadata metadata metadata of the TeX file
+--- @param extensions table list of extensions
+--- @return boolean needs_compilation true if the file needs compilation
+--- @return output_file[] list of output files 
 local function check_output_files(metadata, extensions)
   local output_files = {}
   local tex_file = metadata.relative_path
@@ -174,6 +193,10 @@ local function check_output_files(metadata, extensions)
     local status = is_up_to_date(metadata, html_file)
     needs_compilation = needs_compilation or status
     log:debug("needs compilation", html_file.absolute_path, status)
+    --- @class output_file 
+    --- @field needs_compilation boolean true if the file needs compilation
+    --- @field metadata metadata of the output file 
+    --- @field extension string of the output file
     output_files[#output_files+1] = {
       needs_compilation = status,
       metadata          = html_file,
@@ -184,8 +207,8 @@ local function check_output_files(metadata, extensions)
 end
 
 --- create sorted table of files that needs to be compiled 
----@param tex_files table list of TeX files metadata
----@return table to_be_compiled list of files in order to be compiled
+--- @param tex_files metadata[] list of TeX files metadata
+--- @return metadata[] to_be_compiled list of files in order to be compiled
 local function sort_dependencies(tex_files)
   -- create a dependency graph for files that needs compilation 
   -- the files that include other courses needs to be compiled after changed courses 
@@ -223,8 +246,8 @@ end
 
 --- find TeX files that needs to be compiled in the directory tree
 --- @param dir string root directory where we should find TeX files
---- @return table to_be_compiled list of that need compilation
---- @return table tex_files list of all TeX files found in the directory tree
+--- @return metadata[] to_be_compiled list of that need compilation
+--- @return metadata[] tex_files list of all TeX files found in the directory tree
 local function needing_compilation(dir)
   local files = get_files(dir)
   local tex_files = filter_main_tex_files(get_tex_files(files))
