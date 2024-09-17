@@ -34,7 +34,7 @@ local function compile(file)
     if command_metadata and output.needs_compilation then
       local command_template = command_metadata.command
       local command = prepare_command(file, command_template)
-      print(command)
+      log:debug("command " .. command)
       if false then
         -- we reuse this file from make4ht's mkutils.lua
         local f = io.popen(command, "r")
