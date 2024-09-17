@@ -41,7 +41,8 @@ local function get_metadata(dir, entry)
   --- @class metadata 
   --- @field dir string relative directory path of the file 
   --- @field absolute_dir string absolute directory path of the file
-  --- @field filename string basename of the file
+  --- @field filename string filename of the file
+  --- @field basename string filename without extension
   --- @field extension string file extension
   --- @field relative_path string relative path of the file 
   --- @field absolute_path string absolute path of the file
@@ -56,12 +57,13 @@ local function get_metadata(dir, entry)
     filename = entry,
     relative_path = relative_path,
     absolute_path = abspath(relative_path),
-    extension     = get_extension(relative_path),
     modified      = path.getmtime(relative_path),
+    extension     = get_extension(entry),
     dependecies   = {},
     needs_compilation = false,
     output_files  = {},
   }
+  metadata.basename, _ = path.splitext(entry)
   metadata.exists = mkutils.file_exists(metadata.absolute_path)
   return metadata
 end

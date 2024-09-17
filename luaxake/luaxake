@@ -9,6 +9,19 @@ config = {
   output_formats = {"html", "pdf"},
   -- number of lines in tex files where we should look for \documentclass
   documentclass_lines = 30,
+  compilers = {
+    pdf = {
+      command = "pdflatex @{filename}",
+      check_log = true, -- check log
+      status = 0 -- check that the latex command return 0
+    },
+    html = {
+      command = "make4ht -f html5+dvisvgm_hashes -c ximera.cfg -m draft @{filename}",
+      check_log = true, -- check log
+      status = 0 -- check that the latex command return 0
+    }
+  }
+
 }
 
 local files = require "luaxake-files"
