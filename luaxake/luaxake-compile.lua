@@ -31,20 +31,35 @@ local function test_log_file(filename)
   return error_logparser.parse(content)
 end
 
+local function copy_table(tbl)
+  local t = {}
+  for k,v in pairs(tbl) do 
+    if type(v) == "table" then
+      t[k] = copy_table(v)
+    else
+      t[k] = v 
+    end
+  end
+  return t
+end
+
 --- run a command
 --- @param file metadata file on which the command should be run
 --- @return number status returned by the command
 --- @return string output from the command
-local function compile(file)
+local function compile(file, compilers)
   local current_dir = lfs.currentdir()
   lfs.chdir(file.absolute_dir)
   local output_files = file.output_files
   for _, output in ipairs(output_files) do
     local extension = output.extension
-    local command_metadata = config.compilers[extension]
+    local command_metadata = compilers[extension]
     if command_metadata and output.needs_compilation then
       local command_template = command_metadata.command
-      local command = prepare_command(file, command_template)
+      -- we need to make a copy of file metadata to insert some additional fields without modification of the original
+      local tpl_table = copy_table(file)
+      tpl_table.output_file = file.filename:gsub("tex$", extension)
+      local command = prepare_command(tpl_table, command_template)
       log:debug("command " .. command)
       -- we reuse this file from make4ht's mkutils.lua
       local f = io.popen(command, "r")

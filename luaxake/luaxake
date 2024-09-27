@@ -7,7 +7,7 @@ local log = logging.new("luaxake")
 
 config = {
   -- list of extensions of output files
-  output_formats = {"html", "pdf"},
+  output_formats = {"html", "pdf", "sagetex.sage"},
   -- number of lines in tex files where we should look for \documentclass
   documentclass_lines = 30,
   compilers = {
@@ -20,7 +20,13 @@ config = {
       command = "make4ht -f html5+dvisvgm_hashes -c ximera.cfg -m draft @{filename}",
       check_log = true, -- check log
       status = 0 -- check that the latex command return 0
-    }
+    },
+    ["sagetex.sage"] = {
+      command = "sage @{output_file}",
+      check_log = true, -- check log
+      status = 0 -- check that the latex command return 0
+    },
+
   },
   clean = {
     "aux",
@@ -38,7 +44,6 @@ config = {
     "log",
     "auxlock",
     "dvi",
-    "pdf",
     "scmd",
     "sout",
   }
@@ -57,7 +62,7 @@ local to_be_compiled, tex_files = files.needing_compilation(dir)
 if #to_be_compiled > 0 then
   for _, meta in ipairs(to_be_compiled) do
     log:status("updated file " .. meta.absolute_path)
-    compile.compile(meta, "pdflatex @{filename}")
+    compile.compile(meta, config.compilers)
     compile.clean(meta, config.clean)
   end
 else
