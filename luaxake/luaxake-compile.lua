@@ -87,7 +87,7 @@ local function compile(file, compilers, compile_sequence)
       --- @field command string executed command
       --- @field output string stdout from the command
       --- @field status number status code returned by command
-      --- @field errors table errors detected in the log file
+      --- @field errors? table errors detected in the log file
       local info = {
         output_file = output_file,
         command = command,

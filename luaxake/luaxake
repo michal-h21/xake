@@ -5,6 +5,19 @@ logging = require("make4ht-logging")
 local log = logging.new("luaxake")
 
 
+--- @class compiler 
+--- @field command string command template
+--- @field check_log? boolean should we check the log file for errors?
+--- @field check_file? boolean execute command only if the output file exists
+--- @field status? number expected status code from the command
+
+--- @class config
+--- @field output_formats [string] list of output format extensions
+--- @field documentclass_lines number on how many lines in TeX files we should try to look for \documentclass
+--- @field compilers {string: compiler}
+--- @field compile_sequence [string] sequence  of compiler names to be executed
+--- @field clean [string] list of extensions of temp files to be removed after the compilation
+
 config = {
   -- list of extensions of output files
   output_formats = {"html", "pdf", "sagetex.sage"},
@@ -51,6 +64,7 @@ config = {
   }
 
 }
+
 
 local files = require "luaxake-files"
 local compile = require "luaxake-compile"
