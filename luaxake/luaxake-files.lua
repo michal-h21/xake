@@ -187,7 +187,7 @@ end
 --- @return output_file[] list of output files 
 local function check_output_files(metadata, extensions)
   local output_files = {}
-  local tex_file = metadata.relative_path
+  local tex_file = metadata.filename
   local needs_compilation = false
   for _, extension in ipairs(extensions) do
     local html_file = get_metadata(metadata.dir, tex_file:gsub("tex$", extension))
