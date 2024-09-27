@@ -29,6 +29,7 @@ config = {
     },
 
   },
+  compile_sequence = {"pdf", "sagetex.sage", "pdf", "html"},
   clean = {
     "aux",
     "4ct",
@@ -63,7 +64,7 @@ local to_be_compiled, tex_files = files.needing_compilation(dir, config.output_f
 if #to_be_compiled > 0 then
   for _, meta in ipairs(to_be_compiled) do
     log:status("updated file " .. meta.absolute_path)
-    compile.compile(meta, config.compilers)
+    compile.compile(meta, config.compilers, config.compile_sequence)
     compile.clean(meta, config.clean)
   end
 else

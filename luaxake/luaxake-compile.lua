@@ -46,14 +46,15 @@ end
 --- run a command
 --- @param file metadata file on which the command should be run
 --- @param compilers table list of compilers
---- @return number status returned by the command
---- @return string output from the command
-local function compile(file, compilers)
+--- @param compile_sequence table sequence of keys from the compilers table to be executed
+--- @return table statuses information from the commands
+local function compile(file, compilers, compile_sequence)
   local current_dir = lfs.currentdir()
   lfs.chdir(file.absolute_dir)
   local output_files = file.output_files
-  for _, output in ipairs(output_files) do
-    local extension = output.extension
+  local statuses = {}
+  
+  for _, extension in ipairs(compile_sequence) do
     local command_metadata = compilers[extension]
     local output_file = file.filename:gsub("tex$", extension)
     if command_metadata and command_metadata.check_file then
@@ -63,7 +64,8 @@ local function compile(file, compilers)
         command_metadata = nil
       end
     end
-    if command_metadata and output.needs_compilation then
+    -- if command_metadata and output.needs_compilation then
+    if command_metadata then
       local command_template = command_metadata.command
       -- we need to make a copy of file metadata to insert some additional fields without modification of the original
       local tpl_table = copy_table(file)
@@ -81,13 +83,20 @@ local function compile(file, compilers)
       if status ~= command_metadata.status then
         log:error("Command returned wrong status number: " .. (status or ""))
       end
+      local info = {
+        output_file = output_file,
+        command = command,
+        output = output,
+        status = status
+      }
       if command_metadata.check_log then
-        local errors = test_log_file(file.basename .. ".log")
+        info.errors = test_log_file(file.basename .. ".log")
       end
+      table.insert(statuses, info)
     end
   end
   lfs.chdir(current_dir)
-  return status, output
+  return statuses
 end
 
 --- remove temporary files
