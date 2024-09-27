@@ -185,7 +185,7 @@ end
 --- @param extensions table list of extensions
 --- @return boolean needs_compilation true if the file needs compilation
 --- @return output_file[] list of output files 
-local function check_output_files(metadata, extensions)
+local function check_output_files(metadata, extensions, compilers)
   local output_files = {}
   local tex_file = metadata.filename
   local needs_compilation = false
@@ -193,6 +193,13 @@ local function check_output_files(metadata, extensions)
     local html_file = get_metadata(metadata.dir, tex_file:gsub("tex$", extension))
     -- detect if the HTML file needs recompilation
     local status = is_up_to_date(metadata, html_file)
+    -- for some extensions (like sagetex.sage), we need to check if the output file exists 
+    -- and stop the compilation if it doesn't
+    local compiler = compilers[extension] or {}
+    if compiler.check_file and not mkutils.file_exists(html_file.absolute_path) then
+      log:debug("Ignored output file doesn't exist: " .. html_file.absolute_path)
+      status = false
+    end
     needs_compilation = needs_compilation or status
     log:debug("needs compilation", html_file.absolute_path, status)
     --- @class output_file 
@@ -250,7 +257,7 @@ end
 --- @param dir string root directory where we should find TeX files
 --- @return metadata[] to_be_compiled list of that need compilation
 --- @return metadata[] tex_files list of all TeX files found in the directory tree
-local function needing_compilation(dir)
+local function needing_compilation(dir, output_formats, compilers)
   local files = get_files(dir)
   local tex_files = filter_main_tex_files(get_tex_files(files))
   -- now check which output files needs a compilation
@@ -258,7 +265,7 @@ local function needing_compilation(dir)
     -- get list of included TeX files
     metadata.dependecies = get_tex_dependencies(metadata)
     -- check for the need compilation
-    local status, output_files = check_output_files(metadata, config.output_formats)
+    local status, output_files = check_output_files(metadata, output_formats, compilers)
     metadata.needs_compilation = status
     metadata.output_files = output_files
     log:debug("main tex file", metadata.filename, metadata.absolute_dir, metadata.extension, status)

@@ -24,6 +24,7 @@ config = {
     ["sagetex.sage"] = {
       command = "sage @{output_file}",
       check_log = true, -- check log
+      check_file = true, -- check if the sagetex.sage file exists
       status = 0 -- check that the latex command return 0
     },
 
@@ -57,7 +58,7 @@ local compile = require "luaxake-compile"
 local dir = arg[1] or "."
 
 
-local to_be_compiled, tex_files = files.needing_compilation(dir)
+local to_be_compiled, tex_files = files.needing_compilation(dir, config.output_formats, config.compilers)
 
 if #to_be_compiled > 0 then
   for _, meta in ipairs(to_be_compiled) do

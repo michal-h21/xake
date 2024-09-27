@@ -45,6 +45,7 @@ end
 
 --- run a command
 --- @param file metadata file on which the command should be run
+--- @param compilers table list of compilers
 --- @return number status returned by the command
 --- @return string output from the command
 local function compile(file, compilers)
@@ -54,11 +55,19 @@ local function compile(file, compilers)
   for _, output in ipairs(output_files) do
     local extension = output.extension
     local command_metadata = compilers[extension]
+    local output_file = file.filename:gsub("tex$", extension)
+    if command_metadata and command_metadata.check_file then
+      -- sometimes compiler wants to check for the output file (like for sagetex.sage),
+      if not mkutils.file_exists(output_file) then
+        -- ignore this command if the file doesn't exist
+        command_metadata = nil
+      end
+    end
     if command_metadata and output.needs_compilation then
       local command_template = command_metadata.command
       -- we need to make a copy of file metadata to insert some additional fields without modification of the original
       local tpl_table = copy_table(file)
-      tpl_table.output_file = file.filename:gsub("tex$", extension)
+      tpl_table.output_file = output_file
       local command = prepare_command(tpl_table, command_template)
       log:debug("command " .. command)
       -- we reuse this file from make4ht's mkutils.lua
