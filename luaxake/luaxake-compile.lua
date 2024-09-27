@@ -1,6 +1,9 @@
 local M = {}
 local lfs = require "lfs"
 local error_logparser = require("make4ht-errorlogparser")
+local pl = require "penlight"
+local mkutils = require("mkutils")
+local path = pl.path
 
 
 local log = logging.new("compile")
@@ -63,6 +66,21 @@ local function compile(file)
   return status, output
 end
 
+--- remove temporary files
+---@param basefile metadata 
+---@param extensions table list of extensions of files to be removed
+local function clean(basefile, extensions)
+  local basename = path.splitext(basefile.absolute_path)
+  for _, ext in ipairs(extensions) do
+    local filename = basename .. "." .. ext
+    if mkutils.file_exists(filename) then
+      log:debug("Removing temp file: " .. filename)
+      os.remove(filename)
+    end
+  end
+end
+
 M.compile = compile
+M.clean   = clean
 
 return M
