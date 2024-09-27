@@ -47,13 +47,12 @@ end
 --- @param file metadata file on which the command should be run
 --- @param compilers table list of compilers
 --- @param compile_sequence table sequence of keys from the compilers table to be executed
---- @return table statuses information from the commands
+--- @return [compile_info] statuses information from the commands
 local function compile(file, compilers, compile_sequence)
   local current_dir = lfs.currentdir()
   lfs.chdir(file.absolute_dir)
   local output_files = file.output_files
   local statuses = {}
-  
   for _, extension in ipairs(compile_sequence) do
     local command_metadata = compilers[extension]
     local output_file = file.filename:gsub("tex$", extension)
@@ -83,6 +82,12 @@ local function compile(file, compilers, compile_sequence)
       if status ~= command_metadata.status then
         log:error("Command returned wrong status number: " .. (status or ""))
       end
+      --- @class compile_info
+      --- @field output_file string output file name
+      --- @field command string executed command
+      --- @field output string stdout from the command
+      --- @field status number status code returned by command
+      --- @field errors table errors detected in the log file
       local info = {
         output_file = output_file,
         command = command,
