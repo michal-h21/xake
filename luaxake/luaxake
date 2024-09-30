@@ -25,12 +25,14 @@ config = {
   documentclass_lines = 30,
   compilers = {
     pdf = {
-      command = "pdflatex @{filename}",
+      -- this doesn't work well
+      -- command = 'pdflatex -interaction=nonstopmode  -file-line-error -shell-escape  "\\PassOptionsToClass{tikzexport}{ximera}\\PassOptionsToClass{xake}{ximera}\\PassOptionsToClass{xake}{xourse}\\nonstopmode\\input{@{filename}}"',
+      command = 'pdflatex -interaction=nonstopmode  -file-line-error -shell-escape  "\\PassOptionsToClass{xake}{ximera}\\PassOptionsToClass{xake}{xourse}\\input{@{filename}}"',
       check_log = true, -- check log
       status = 0 -- check that the latex command return 0
     },
     html = {
-      command = "make4ht -f html5+dvisvgm_hashes -c ximera.cfg -m draft @{filename}",
+      command = "make4ht -f html5+dvisvgm_hashes -c ximera.cfg -sm draft @{filename}",
       check_log = true, -- check log
       status = 0 -- check that the latex command return 0
     },
@@ -78,7 +80,8 @@ local to_be_compiled, tex_files = files.needing_compilation(dir, config.output_f
 if #to_be_compiled > 0 then
   for _, meta in ipairs(to_be_compiled) do
     log:status("updated file " .. meta.absolute_path)
-    compile.compile(meta, config.compilers, config.compile_sequence)
+    local statuses = compile.compile(meta, config.compilers, config.compile_sequence)
+    compile.print_errors(statuses)
     compile.clean(meta, config.clean)
   end
 else

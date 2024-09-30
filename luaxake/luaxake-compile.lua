@@ -104,6 +104,23 @@ local function compile(file, compilers, compile_sequence)
   return statuses
 end
 
+--- print error messages parsed from the LaTeX log
+---@param errors table
+local function print_errors(statuses)
+  for _, status in ipairs(statuses) do
+    local errors = status.errors or {}
+    if #errors > 0 then
+      log:error("Compilation errors in the latex run")
+      log:error(status.command)
+      log:error("Filename", "Line", "Message")
+      for _, err in ipairs(errors) do
+        log:error(err.filename or "?", err.line or "?", err.error)
+        log:status(err.context)
+      end
+    end
+  end
+end
+
 --- remove temporary files
 ---@param basefile metadata 
 ---@param extensions table list of extensions of files to be removed
@@ -118,7 +135,8 @@ local function clean(basefile, extensions)
   end
 end
 
-M.compile = compile
-M.clean   = clean
+M.compile      = compile
+M.print_errors = print_errors
+M.clean        = clean
 
 return M
