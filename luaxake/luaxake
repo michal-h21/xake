@@ -12,12 +12,19 @@ Usage:
 $ texlua luaxake <dir>
 
 Options: 
--c,--config         Path to config file
--h,--help           Print help message
--v,--version        Version info
-<dir>  (default .)  Document root directory
+-c,--config  (default ximera.cfg)  TeX4ht config file
+-h,--help                          Print help message
+-s,--settings  (default none)      Luaxake settings script
+-v,--version                       Version info
+<dir>  (default .)                 Document root directory
 ]]
 
+--- @class args
+--- @field config string TeX4ht config file
+--- @field help boolean Print help message
+--- @field settings string Luaxake settings script
+--- @field version boolean Print version
+--- @field dir string Document root directory
 local args = lapp(option_text)
 
 if args.version then
@@ -37,6 +44,7 @@ end
 --- @field compilers {string: compiler}
 --- @field compile_sequence [string] sequence  of compiler names to be executed
 --- @field clean [string] list of extensions of temp files to be removed after the compilation
+--- @field config_file string TeX4ht config file 
 
 config = {
   -- list of extensions of output files
@@ -52,7 +60,7 @@ config = {
       status = 0 -- check that the latex command return 0
     },
     html = {
-      command = "make4ht -f html5+dvisvgm_hashes -c ximera.cfg -sm draft @{filename}",
+      command = "make4ht -f html5+dvisvgm_hashes -c @{config_file} -sm draft @{filename}",
       check_log = true, -- check log
       status = 0 -- check that the latex command return 0
     },
@@ -91,12 +99,22 @@ config = {
 local files = require "luaxake-files"
 local compile = require "luaxake-compile"
 
+config.config_file = args.config
 
-local dir = args.dir
+if args.settings~="none" then
+  -- config file can be a Lua script, which should only set properties for the config table
+  local configlib = require "luaxake-config"
+  log:debug("Using settings file: " .. args.settings)
+  configlib.update_config(args.settings, config)
+end
 
-log:debug("Processing directory: " .. dir)
 
-local to_be_compiled, tex_files = files.needing_compilation(dir, config.output_formats, config.compilers)
+config.dir = args.dir
+
+
+log:debug("Processing directory: " .. config.dir)
+
+local to_be_compiled, tex_files = files.needing_compilation(config.dir, config.output_formats, config.compilers)
 
 if #to_be_compiled > 0 then
   for _, meta in ipairs(to_be_compiled) do

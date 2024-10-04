@@ -3,6 +3,7 @@ local pl = require "penlight"
 local graph = require "luaxake-graph"
 local log = logging.new("files")
 local mkutils = require "mkutils"
+local lfs = require "lfs"
 
 local path = pl.path
 
@@ -32,6 +33,31 @@ local function prepare_dir(dir)
   return dir:gsub("/$", "")
 end
 
+--- find TeX4ht config file 
+--- @param filename string name of the config file
+--- @param directories [string]
+--- @return string path of the config file
+local function find_config(filename, directories)
+  -- the situation with the TeX4ht config file is a bit complicated
+  -- it can be placed in the current directory, in the document root directory, 
+  -- or in the kpse path. if it cannot be found in any of these places, 
+  -- we will set it to xhtml, which is internall config of TeX4ht
+  -- in any case, we must provide a full path to the config file, because it will 
+  -- be used in different directories. 
+  for _, dir in ipairs(directories) do
+    local path = dir .. "/" .. filename
+    if mkutils.file_exists(path) then
+      return path
+    end
+  end
+  -- if we cannot find the config file in any directory, try to find it using kpse
+  local path = kpse.find_file(filename, "texmfscripts")
+  if path then return path end
+  -- xhtml is default TeX4th cofig file, use it if we cannot find a user config file
+  return "xhtml"
+
+end
+
 --- get absolute and relative file path, as well as other file metadata
 --- @param dir string current directory
 --- @param entry string current filename
@@ -51,6 +77,7 @@ local function get_metadata(dir, entry)
   --- @field needs_compilation boolean 
   --- @field exists boolean true if file exists
   --- @field output_files output_file[]
+  --- @field config_file string TeX4ht config file
   local metadata = {
     dir = dir,
     absolute_dir = abspath(dir),
@@ -268,6 +295,11 @@ local function needing_compilation(dir, output_formats, compilers)
     local status, output_files = check_output_files(metadata, output_formats, compilers)
     metadata.needs_compilation = status
     metadata.output_files = output_files
+    -- try to find the TeX4ht .cfg file
+    if metadata.needs_compilation then
+      metadata.config_file = find_config(config.config_file, {lfs.currentdir(), metadata.absolute_dir, abspath(config.dir)})
+      log:debug("Use config file: " .. metadata.config_file)
+    end
     log:debug("main tex file", metadata.filename, metadata.absolute_dir, metadata.extension, status)
   end
 
@@ -275,6 +307,7 @@ local function needing_compilation(dir, output_formats, compilers)
   local to_be_compiled = sort_dependencies(tex_files)
   return to_be_compiled, tex_files
 end
+
 
 M.needing_compilation = needing_compilation
 
