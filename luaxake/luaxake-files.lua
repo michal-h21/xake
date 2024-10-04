@@ -53,6 +53,8 @@ local function find_config(filename, directories)
   -- if we cannot find the config file in any directory, try to find it using kpse
   local path = kpse.find_file(filename, "texmfscripts")
   if path then return path end
+  -- lastly, test if it is a full path to the file
+  if mkutils.file_exists(filename) then return filename end
   -- xhtml is default TeX4th cofig file, use it if we cannot find a user config file
   return "xhtml"
 
