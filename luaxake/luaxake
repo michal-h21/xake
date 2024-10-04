@@ -3,7 +3,27 @@ kpse.set_program_name "luatex"
 
 logging = require("make4ht-logging")
 local log = logging.new("luaxake")
+local lapp = require "lapp-mk4"
+local version = "{{version}}"
 
+local option_text = [[ 
+Luaxake: build system for Ximera documents
+Usage: 
+$ texlua luaxake <dir>
+
+Options: 
+-c,--config         Path to config file
+-h,--help           Print help message
+-v,--version        Version info
+<dir>  (default .)  Document root directory
+]]
+
+local args = lapp(option_text)
+
+if args.version then
+  print("Luaxake version: " .. (version == "{{version}}" and "devel" or version))
+  os.exit()
+end
 
 --- @class compiler 
 --- @field command string command template
@@ -72,8 +92,9 @@ local files = require "luaxake-files"
 local compile = require "luaxake-compile"
 
 
-local dir = arg[1] or "."
+local dir = args.dir
 
+log:debug("Processing directory: " .. dir)
 
 local to_be_compiled, tex_files = files.needing_compilation(dir, config.output_formats, config.compilers)
 
