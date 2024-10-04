@@ -22,3 +22,13 @@ What it should do:
   project root and local TEXMF tree.
 - `-s`,`--script` -- Lua script that can change Luaxake configuration settings.
 
+
+# Lua scripting 
+
+You can set settings using a Lua script with the `-s` option. The script should 
+only set the configuration values. For example, to change the command for HTML 
+conversion, you can use the following script:
+
+```Lua 
+compilers.html.command = "make4ht -c @{config_file} @{filename} 'options'"
+```
