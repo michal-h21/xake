@@ -77,7 +77,7 @@ local function get_metadata(dir, entry)
   --- @field needs_compilation boolean 
   --- @field exists boolean true if file exists
   --- @field output_files output_file[]
-  --- @field config_file string TeX4ht config file
+  --- @field config_file? string TeX4ht config file
   local metadata = {
     dir = dir,
     absolute_dir = abspath(dir),
@@ -296,7 +296,9 @@ local function needing_compilation(dir, output_formats, compilers)
     metadata.needs_compilation = status
     metadata.output_files = output_files
     -- try to find the TeX4ht .cfg file
+    -- to speed things up, we will find it only for files that needs a compilation
     if metadata.needs_compilation then
+      -- search in the current work dir first, then in  the directory of the TeX file, and project root
       metadata.config_file = find_config(config.config_file, {lfs.currentdir(), metadata.absolute_dir, abspath(config.dir)})
       log:debug("Use config file: " .. metadata.config_file)
     end
