@@ -20,6 +20,7 @@ What it should do:
   search first in the directory with the current TeX file, to support different
   config files for different projects, then in the current working directory,
   project root and local TEXMF tree.
+
 - `-s`,`--script` -- Lua script that can change Luaxake configuration settings.
 
 
