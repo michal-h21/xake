@@ -36,12 +36,16 @@ end
 
 logging.set_level(args.loglevel)
 
+--- @class DOM_Object 
+--- Dummy type declaration for LuaXML DOM object, to prevent error messages from language server
+--- @field query_selector function get all elements that match a given CSS selector
 
 --- @class compiler 
 --- @field command string command template
 --- @field check_log? boolean should we check the log file for errors?
 --- @field check_file? boolean execute command only if the output file exists
 --- @field status? number expected status code from the command
+--- @field process_html? boolean run HTML post-processing
 
 --- @class config
 --- @field output_formats [string] list of output format extensions
@@ -67,7 +71,8 @@ config = {
     html = {
       command = "make4ht -f html5+dvisvgm_hashes -c @{config_file} -sm draft @{filename}",
       check_log = true, -- check log
-      status = 0 -- check that the latex command return 0
+      status = 0, -- check that the latex command return 0
+      process_html = true,
     },
     ["sagetex.sage"] = {
       command = "sage @{output_file}",

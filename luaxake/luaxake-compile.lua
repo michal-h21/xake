@@ -4,6 +4,7 @@ local error_logparser = require("make4ht-errorlogparser")
 local pl = require "penlight"
 local mkutils = require("mkutils")
 local path = pl.path
+local html_transform = require "luaxake-transform-html"
 
 
 local log = logging.new("compile")
@@ -45,7 +46,7 @@ end
 
 --- run a command
 --- @param file metadata file on which the command should be run
---- @param compilers table list of compilers
+--- @param compilers [compiler] list of compilers
 --- @param compile_sequence table sequence of keys from the compilers table to be executed
 --- @return [compile_info] statuses information from the commands
 local function compile(file, compilers, compile_sequence)
@@ -88,6 +89,8 @@ local function compile(file, compilers, compile_sequence)
       --- @field output string stdout from the command
       --- @field status number status code returned by command
       --- @field errors? table errors detected in the log file
+      --- @field html_processing_status? boolean did HTML processing run without errors?
+      --- @field html_processing_message? string possible error message from HTML post-processing
       local info = {
         output_file = output_file,
         command = command,
@@ -96,6 +99,12 @@ local function compile(file, compilers, compile_sequence)
       }
       if command_metadata.check_log then
         info.errors = test_log_file(file.basename .. ".log")
+      end
+      if command_metadata.process_html then
+        info.html_processing_status, info.html_processing_message = html_transform.process(file)
+        if not info.html_processing_status then
+          log:error("Error in HTML post processing: " .. (info.html_processing_message or ""))
+        end
       end
       table.insert(statuses, info)
     end
