@@ -85,14 +85,15 @@ compilers = {
 }
 ```
 
-Available settings in the `compiler` table:
+### Settings available in the `compiler` table:
 
 - `check_log` -- should we check the log file for errors?
 - `check_file` -- check if the file exists before compilation. It is used by `sage`, which must be executed only if `filename.sagetex.sage` exists.
 - `status` -- expected status code from the command.
+- `process_html` -- run HTML post-processing.
 - `command` -- template for the command to be executed. `@{variable}` tag will be replaced with the content of variable. 
 
-### Variables available in templates:
+### Variables available in command templates:
 
   - `dir` -- relative directory path of the file 
   - `absolute_dir` -- absolute directory path of the file
