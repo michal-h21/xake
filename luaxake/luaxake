@@ -39,6 +39,10 @@ logging.set_level(args.loglevel)
 --- @class DOM_Object 
 --- Dummy type declaration for LuaXML DOM object, to prevent error messages from language server
 --- @field query_selector function get all elements that match a given CSS selector
+--- @field get_children function 
+--- @field get_text function 
+--- @field get_attribute function
+--- @field remove_node function
 
 --- @class compiler 
 --- @field command string command template

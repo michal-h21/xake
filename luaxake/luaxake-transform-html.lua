@@ -31,6 +31,50 @@ local function load_html(filename)
   return domobject.html_parse(content)
 end
 
+--- detect if the HTML file is xourse
+---@param dom DOM_Object
+---@return boolean
+local function is_xourse(dom, html_file)
+  local metas = dom:query_selector("meta[name='description']")
+  if #metas == 0 then
+    log:warning("Cannot find any meta[description] tags in " .. html_file.absolute_path)
+  end
+  for _, meta in ipairs(metas) do
+    if meta:get_attribute("content") == "xourse" then
+      return true
+    end
+  end
+  return false
+end
+
+local function is_element_empty(element)
+  -- detect if element is empty or contains only blank spaces
+  local children = element:get_children()
+  if #children > 1 then return false 
+  elseif #children == 1 then
+    if children[1]:is_text() then
+      if children[1]._text:match("^%s*$") then
+        return true
+      end
+      return false
+    end
+    return false
+  end
+  return true
+  
+end
+
+--- Remove empty paragraphs
+---@param dom DOM_Object
+local function remove_empty_paragraphs(dom)
+  for _, par in ipairs(dom:query_selector("p")) do
+    if is_element_empty(par) then
+      log:debug("Removing empty par")
+      par:remove_node()
+    end
+  end
+end
+
 --- Post-process HTML files
 ---@param file metadata 
 ---@return boolean status
@@ -41,11 +85,8 @@ local function process(file)
   if not html_file then return false, msg end
   local dom, msg = load_html(html_file.absolute_path)
   if not dom then return false, msg end
-  for _, meta in ipairs(dom:query_selector("meta[name='description']")) do
-    if meta:get_attribute("content") == "xourse" then
-      log:status("hello xourse!")
-    end
-  end
+  remove_empty_paragraphs(dom)
+  local is_xourse = is_xourse(dom, html_file)
 
 
   return true
