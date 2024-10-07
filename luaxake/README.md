@@ -22,7 +22,7 @@ What it should do:
   project root and local TEXMF tree.
 
 - `-l`,`--loglevel` -- Set level of messages printed to the terminal. Possible
-  values: debug, info, status, warning, error, fatal. Default value is `status`,
+  values: `debug`, `info`, `status`, `warning`, `error`, `fatal`. Default value is `status`,
   which prints warnings, errors and status messages.
 
 - `-s`,`--script` -- Lua script that can change Luaxake configuration settings.
@@ -67,7 +67,7 @@ clean = { "aux", "4ct", "4tc", "oc", "md5", "dpth", "out", "jax", "idv", "lg", "
 
 ## Compilers
 
--- `compilers` -- settings for compiler commands. Each compiler contains table with additional settings.
+- `compilers` -- settings for compiler commands. Each compiler contains table with additional settings.
 
 There are three available compilers, but you can add more:
 
@@ -92,7 +92,7 @@ Available settings in the `compiler` table:
 - `status` -- expected status code from the command.
 - `command` -- template for the command to be executed. `@{variable}` tag will be replaced with the content of variable. 
 
-Available variables:
+### Variables available in templates:
 
   - `dir` -- relative directory path of the file 
   - `absolute_dir` -- absolute directory path of the file
