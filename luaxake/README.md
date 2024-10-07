@@ -21,6 +21,10 @@ What it should do:
   config files for different projects, then in the current working directory,
   project root and local TEXMF tree.
 
+- `-l`,`--loglevel` -- Set level of messages printed to the terminal. Possible
+  values: debug, info, status, warning, error, fatal. Default value is `status`,
+  which prints warnings, errors and status messages.
+
 - `-s`,`--script` -- Lua script that can change Luaxake configuration settings.
 
 

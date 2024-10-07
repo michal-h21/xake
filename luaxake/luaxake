@@ -14,6 +14,8 @@ $ texlua luaxake <dir>
 Options: 
 -c,--config  (default ximera.cfg)  TeX4ht config file
 -h,--help                          Print help message
+-l,--loglevel (default status)     Set log level.
+                                   possible values: debug, info, status, warning, error, fatal
 -s,--settings  (default none)      Luaxake settings script
 -v,--version                       Version info
 <dir>  (default .)                 Document root directory
@@ -31,6 +33,9 @@ if args.version then
   print("Luaxake version: " .. (version == "{{version}}" and "devel" or version))
   os.exit()
 end
+
+logging.set_level(args.loglevel)
+
 
 --- @class compiler 
 --- @field command string command template
