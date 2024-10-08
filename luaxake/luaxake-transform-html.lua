@@ -81,6 +81,19 @@ local function remove_empty_paragraphs(dom)
   end
 end
 
+
+--- Transform Xourse files
+---@param dom DOM_Object
+---@param file metadata
+---@return DOM_Object
+local function transform_xourse(dom, file)
+  log:debug("strange", file.filename, file.basename)
+  for _, dependency in ipairs(file.dependecies) do
+    log:debug("dependency", dependency.relative_path, dependency.filename, dependency.basename)
+  end
+  return dom
+end
+
 --- Save DOM to file
 ---@param dom DOM_Object
 ---@param filename string
@@ -106,7 +119,10 @@ local function process(file)
   local dom, msg = load_html(html_name)
   if not dom then return false, msg end
   remove_empty_paragraphs(dom)
-  local is_xourse = is_xourse(dom, html_file)
+  if is_xourse(dom, html_file) then
+    transform_xourse(dom, file)
+  end
+
   return save_html(dom, html_name)
 end
 
