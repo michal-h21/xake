@@ -87,10 +87,13 @@ end
 ---@param file metadata
 ---@return DOM_Object
 local function transform_xourse(dom, file)
-  log:debug("strange", file.filename, file.basename)
-  for _, dependency in ipairs(file.dependecies) do
-    log:debug("dependency", dependency.relative_path, dependency.filename, dependency.basename)
+  for _, activity in ipairs(dom:query_selector("a.activity")) do
+    local href = activity:get_attribute("href")
+    if href then
+      log:debug("activity", file.absolute_dir .. "/" .. href .. ".html")
+    end
   end
+
   return dom
 end
 
@@ -129,8 +132,8 @@ local function add_dependencies(dom, file)
   for _, dependency in ipairs(file.dependecies) do
     log:debug("dependency", dependency.relative_path, dependency.filename, dependency.basename)
     local hash, msg = hash_file(dependency.absolute_path)
-    if not hash then 
-      log:warning(msg) 
+    if not hash then
+      log:warning(msg)
     else
       local content = hash .. " " .. dependency.filename
       local meta = head:create_element("meta", {name = "dependency", content = content})
