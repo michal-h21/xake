@@ -94,16 +94,52 @@ local function transform_xourse(dom, file)
   return dom
 end
 
---- Add metadata with dependencies to the HTML DOM
+--- return sha256 digest of a file
+---@param filename string
+---@return string|nil hash
+---@return unknown? error
+local function hash_file(filename)
+  -- Xake used sha1, but we don't have it in Texlua. On the other hand, sha256 is built-in
+  local f = io.open(filename, "r")
+  if not f then return nil, "Cannot open TeX dependency for hashing: " .. (filename or "") end
+  local content = f:read("*a")
+  f:close()
+  -- the digest return binary code, we need to convert it to hexa code
+  local bincode = sha2.digest256(content)
+  local hexs = {}
+  for char in bincode:gmatch(".") do
+    hexs[#hexs+1] = string.format("%X", string.byte(char))
+  end
+  return table.concat(hexs)
+end
+
+
+
+--- Add metadata with TeX file dependencies to the HTML DOM
 ---@param dom DOM_Object
 ---@param file metadata
 ---@return DOM_Object
 local function add_dependencies(dom, file)
+  -- we will add also TeX file of the current HTML file
+  local t = {file}
+  -- copy dependencies, as we have an extra entry of the current file
+  for _, x in ipairs(file.dependecies) do t[#t+1] = x end
+  local head = dom:query_selector("head")[1]
+  if not head then log:error("Cannot find head element " .. file.absolute_path:gsub("tex$", "html")) end
   for _, dependency in ipairs(file.dependecies) do
     log:debug("dependency", dependency.relative_path, dependency.filename, dependency.basename)
+    local hash, msg = hash_file(dependency.absolute_path)
+    if not hash then 
+      log:warning(msg) 
+    else
+      local content = hash .. " " .. dependency.filename
+      local meta = head:create_element("meta", {name = "dependency", content = content})
+      local newline = head:create_text_node("\n")
+      head:add_child_node(meta)
+      head:add_child_node(newline)
+    end
+
   end
-
-
   return dom
 end
 
