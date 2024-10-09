@@ -94,6 +94,19 @@ local function transform_xourse(dom, file)
   return dom
 end
 
+--- Add metadata with dependencies to the HTML DOM
+---@param dom DOM_Object
+---@param file metadata
+---@return DOM_Object
+local function add_dependencies(dom, file)
+  for _, dependency in ipairs(file.dependecies) do
+    log:debug("dependency", dependency.relative_path, dependency.filename, dependency.basename)
+  end
+
+
+  return dom
+end
+
 --- Save DOM to file
 ---@param dom DOM_Object
 ---@param filename string
@@ -119,6 +132,7 @@ local function process(file)
   local dom, msg = load_html(html_name)
   if not dom then return false, msg end
   remove_empty_paragraphs(dom)
+  add_dependencies(dom, file)
   if is_xourse(dom, html_file) then
     transform_xourse(dom, file)
   end
