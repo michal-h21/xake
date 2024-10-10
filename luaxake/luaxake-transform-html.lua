@@ -2,6 +2,7 @@
 local M = {}
 local log = logging.new("transform-html")
 local domobject = require "luaxml-domobject"
+local path = require "pl.path"
 
 --- find metadata for the HTML file
 ---@param file metadata
@@ -81,6 +82,32 @@ local function remove_empty_paragraphs(dom)
   end
 end
 
+--- find HTML file linked from activity
+---@param file metadata of the linking TeX file
+---@param href string relative path from the linking HTML file
+---@return string|nil path to the html file
+---@return string href attribute or error message
+local function find_activity_html(file, href)
+  -- some activity links don't have links to HTML files
+  if path.extension(href) == "" then href = href .. ".html" end
+  local htmlpath = file.absolute_dir .. "/" .. href
+  if path.exists(htmlpath) then return htmlpath, href end
+  return nil, "Cannot find activity file: " .. htmlpath
+end
+
+
+
+local function read_title_and_abstract(activity_dom)
+  local title, abstract
+  local title_el = activity_dom:query_selector("title")[1]
+  if title_el then title = title_el:get_text() end
+  log:debug("title", title)
+  local abstract_el = activity_dom:query_selector("div.abstract")[1]
+  if abstract_el then
+    return title, abstract_el:copy_node()
+  end
+  return title
+end
 
 --- Transform Xourse files
 ---@param dom DOM_Object
@@ -90,7 +117,36 @@ local function transform_xourse(dom, file)
   for _, activity in ipairs(dom:query_selector("a.activity")) do
     local href = activity:get_attribute("href")
     if href then
-      log:debug("activity", file.absolute_dir .. "/" .. href .. ".html")
+      local htmlpath
+      htmlpath, href = find_activity_html(file, href)
+      if htmlpath then
+        log:debug("activity", htmlpath)
+        -- TODO: href has now added .html suffix. but maybe it was without suffix for some specific reason in the first place
+        -- so I will not set the fixed href, because it could break something
+        -- activity:set_attribute("href", href)
+        local activity_dom, msg = load_html(htmlpath)
+        if not activity_dom then
+          log:error(msg)
+        else
+          local title, abstract = read_title_and_abstract(activity_dom)
+          -- add titles and abstracts from linked activity HTML
+          local parent = activity:get_parent()
+          local pos = activity:find_element_pos()
+          if title and title ~= "" then
+            local h2 = parent:create_element("h2")
+            local h2_text = h2:create_text_node(title )
+            h2:add_child_node(h2_text)
+            parent:add_child_node(h2, pos + 1)
+          end
+          -- the problem with abstract is that Ximera redefines \maketitle in TeX4ht to produce nothing, 
+          -- abstract in Ximera is part of \maketitle, so abstracts are missing in the generated HTML
+          if abstract then
+            parent:add_child_node(abstract, pos + 2)
+          end
+        end
+      else
+        log:error(href)
+      end
     end
   end
 
